@@ -93,6 +93,9 @@ window.dash={
 .pl td .sw{margin-right:8px;margin-top:0}
 .pl .sel{font-family:inherit;font-size:1rem;font-weight:500;padding:9px 14px;min-width:15rem;max-width:100%;border:1px solid var(--color-border-line);border-radius:10px;background:var(--color-bg);color:var(--color-fg);cursor:pointer}
 .pl .foot{color:var(--color-fg-muted);font-size:.8125rem;font-weight:300;line-height:1.7;margin:0}
+.pl .seg{display:flex;flex-wrap:wrap;gap:8px}
+.pl .seg button{padding:8px 24px;font-size:.9375rem}
+.pl .seg button.on{background:var(--color-fg);color:var(--color-bg);border-color:var(--color-fg)}
 </style>
 
 <div class="pl">
@@ -162,9 +165,9 @@ window.dash={
   <section class="card" id="q5" style="--ac:var(--a1)">
     <div class="kick">คำถามที่ 5</div>
     <h2>ค่าใช้จ่ายของร้านเดือนละเท่าไหร่?</h2>
-    <p class="note">ค่าเสื่อม/ผ่อนอุปกรณ์ และอื่นๆ คงที่ · ค่าธรรมเนียมแพลตฟอร์ม/บัตร (5% ของยอดขาย) คิดให้อัตโนมัติ · ถ้าเป็นร้านแฟรนไชส์ กดเลือก Franchise fee ในเมนูด้านล่าง</p>
+    <p class="note">ค่าเสื่อม/ผ่อนอุปกรณ์ และอื่นๆ</p>
     <div class="cg" id="g-ops"></div>
-    <div class="ctl" id="g-fr"><div class="lab">Franchise fee (% ของยอดขาย)</div><select class="sel" id="sel-fr" aria-label="Franchise fee"><option value="0">ไม่มี Franchise fee</option><option value="3">3% ของยอดขาย</option><option value="6">6% ของยอดขาย</option><option value="10">10% ของยอดขาย</option></select><div class="hint" id="fr-hint">&nbsp;</div></div>
+    <div class="ctl" id="g-fr"><div class="lab">Franchise fee 6% ของยอดขาย</div><div class="hint" id="fr-hint">&nbsp;</div></div>
     <div class="ans" id="a-ops">&nbsp;</div>
   </section>
 
@@ -186,6 +189,7 @@ window.dash={
   </section>
 </div>
 
+<script src="prompt-font.js"></script>
 <script>
 (function () {
   const q = (s) => document.querySelector(s);
@@ -247,9 +251,7 @@ window.dash={
   (function(){const r=q('.pl').style;r.setProperty('--a0',dash.colors[0]);r.setProperty('--a1',dash.colors[1]);r.setProperty('--a2',dash.colors[2]);r.setProperty('--a4',dash.colors[4]);})();
   STATIC.forEach(mount);
   const SDEF = Object.fromEntries(STATIC.map((s) => [s.k, s.d]));
-  SDEF.fr = 0;
   const defCost = (g) => Math.round((Number(g.avg_price) * Number(g.cogs_pct)) / 100 * 2) / 2;
-  q('#sel-fr').addEventListener('change', (e) => dash.setParams({ fr: Number(e.target.value) }));
   q('.pl .rst').addEventListener('click', () => dash.resetParams());
 
   function ensureDynamic(groups, ops, waste) {
@@ -284,7 +286,6 @@ window.dash={
       el.style.setProperty('--c', def.ci != null ? dash.colors[def.ci] : 'var(--cds-chart-muted)');
     });
   }
-  function syncFr(v) { const e = q('#sel-fr'); if (e.value !== String(v)) e.value = String(v); }
   function setHint(k, text, ok) {
     const r = regs[k];
     if (!r) return;
@@ -315,7 +316,7 @@ window.dash={
     const T = { rev: d3.sum(G, (g) => g.rev), cogsT: d3.sum(G, (g) => g.cogsT), feeT: d3.sum(G, (g) => g.feeT) };
     const opRows = ops.map((r, i) => ({ key: r.key, item: r.item, adj: r.adjust === 'yes', v: r.adjust === 'yes' ? val('op_' + i, Number(r.monthly)) : Number(r.monthly) }));
     const opFixed = d3.sum(opRows, (r) => r.v);
-    const frPct = val('fr');
+    const frPct = 6; // Franchise fee คงที่ 6% ของยอดขาย
     T.frT = T.rev * frPct / 100;
     const opexT = opFixed + T.feeT + T.frT;
     const staffT = d3.sum(opRows.filter((r) => r.key === 'staff'), (r) => r.v);
@@ -381,7 +382,7 @@ window.dash={
       : 'ยังไม่มียอดขาย', R > 0 ? (T.cogsT / R) * 100 <= m.tg.cogs : null);
     ans('#a-waste', 'ของทิ้งรวม ' + baht(m.wasteT) + '/เดือน' + (R > 0 ? ' = ' + pc(m.wasteT / R) + ' ของยอดขาย (เกณฑ์ ≤ ' + m.tg.waste + '%) ' + ((m.wasteT / R) * 100 <= m.tg.waste ? '— อยู่ในเกณฑ์' : '— ลดได้อีก') : ''),
       R > 0 ? (m.wasteT / R) * 100 <= m.tg.waste : null);
-    ans('#a-ops', 'Operation cost รวม ' + baht(m.opexT) + '/เดือน' + (R > 0 ? ' = ' + pc(m.opexT / R) + ' ของยอดขาย' + (m.frPct > 0 ? ' (รวม Franchise fee ' + m.frPct + '%)' : '') + ' · ต้นทุนพนักงาน ' + pc(m.staffT / R) + ' (เกณฑ์ ≤ ' + m.tg.labor + '%)' : ''));
+    ans('#a-ops', 'Operation cost รวม ' + baht(m.opexT) + '/เดือน' + (R > 0 ? ' = ' + pc(m.opexT / R) + ' ของยอดขาย' + ' (รวม Franchise fee ' + m.frPct + '% = ' + baht(T.frT) + ')' + ' · ต้นทุนพนักงาน ' + pc(m.staffT / R) + ' (เกณฑ์ ≤ ' + m.tg.labor + '%)' : ''));
 
     setHint('target', 'เฉลี่ยวันละ ≈ ' + baht(m.tgt / m.days) + ' กำไรสุทธิ');
     setHint('drink', '× ราคาเฉลี่ย ฿' + f0(D.price) + ' = ' + baht(D.revDay) + '/วัน · ' + baht(D.rev) + '/เดือน');
@@ -390,8 +391,7 @@ window.dash={
     setHint('days', 'ยอดขายรวม ≈ ' + baht(R) + '/เดือน');
     setHint('cc_d', 'ขายแก้วละ ฿' + f0(D.price) + ' → ต้นทุน ฿' + f1(D.cost) + ' = ' + f1(D.cogsPct * 100) + '% ของราคาขาย · เหลือกำไรขั้นต้น ฿' + f1(D.price - D.cost) + '/แก้ว');
     setHint('cogs_n', 'ขายชิ้นละ ฿' + f0(N.price) + ' → ต้นทุน ฿' + f1(N.price * N.cogsPct) + ' · เหลือกำไรขั้นต้น ฿' + f1(N.price * (1 - N.cogsPct)) + '/ชิ้น');
-    const fh = q('#fr-hint');
-    fh.textContent = m.frPct > 0 ? 'Franchise fee ' + m.frPct + '% ≈ ' + baht(T.frT) + '/เดือน' : 'ยังไม่คิด Franchise fee — เลือก 3% / 6% / 10% เพื่อดูผลต่อกำไร';
+    q('#fr-hint').textContent = '≈ ' + baht(T.frT / m.days) + '/วัน · ' + baht(T.frT) + '/เดือน';
     m.opRows.forEach((r, i) => {
       if (!r.adj) return;
       const t = R > 0 ? pc(r.v / R) + ' ของยอดขาย' : ' ';
@@ -533,7 +533,7 @@ window.dash={
     rows.push({ cls: 'grp', sw: dash.colors[1], c: ['③ Operation cost', f0(m.opexT), pct(m.opexT)] });
     m.opRows.forEach((r) => rows.push({ cls: 'ind', c: [r.item, f0(r.v), pct(r.v)] }));
     rows.push({ cls: 'ind', c: ['ค่าธรรมเนียมแพลตฟอร์ม/บัตร (' + f0(m.fee * 100) + '% ของยอดขาย)', f0(T.feeT), pct(T.feeT)] });
-    if (m.frPct > 0) rows.push({ cls: 'ind', c: ['Franchise fee (' + m.frPct + '% ของยอดขาย)', f0(T.frT), pct(T.frT)] });
+    rows.push({ cls: 'ind', c: ['Franchise fee (' + m.frPct + '% ของยอดขาย)', f0(T.frT), pct(T.frT)] });
     rows.push({ cls: 'strong', col: T.net >= 0 ? OKC : BADC, c: ['กำไรสุทธิ (กำไรขั้นต้น − ② − ③)', f0(T.net), pct(T.net)] });
     fillTable(q('#t-pl'), ['รายการ', 'บาท / เดือน', '% ของยอดขาย'], rows);
   }
@@ -558,7 +558,6 @@ window.dash={
     const okAll = NAMES.every((n) => d[n].status === 'ok' && d[n].data.length > 0);
     if (okAll) ensureDynamic(d.groups.data, d.operation_costs.data, d.waste_items.data);
     syncAll(val);
-    syncFr(val('fr'));
     if (!okAll) {
       const bad = NAMES.some((n) => d[n].status === 'error' || d[n].status === 'missing');
       clearViews(bad ? 'โหลดข้อมูลสมมติฐานไม่สำเร็จ' : 'กำลังโหลดข้อมูลสมมติฐาน…');
